@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en" data-framework="backbonejs">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- The above 3 meta tags *must* come first in the head; any other head content must come *after* these tags -->
+    <title>Image Stream App</title>
+
+    <!-- Bootstrap core CSS -->
+    <link href="http://hector.dev/devops-assignment/node_modules/bootstrap/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- Custom styles for this template -->
+    <link href="http://hector.dev/devops-assignment/login.css" rel="stylesheet">
+</head>
+
+<body>
+
+<nav class="navbar navbar-inverse navbar-fixed-top">
+    <div class="container">
+        <div class="navbar-header">
+            <a class="navbar-brand" href="#">Image Stream</a>
+        </div>
+    </div>
+</nav>
+
+<div class="container" id="container">
+
+    {% if error %}
+        <div>{{ error.message }}</div>
+    {% endif %}
+
+    <form class="form-signin" action="{{ path('security_login_check') }}" role="form" method="POST">
+        <h2 class="form-signin-heading">Please sign in</h2>
+        <label for="username" class="sr-only">Username</label>
+        <input type="text" name="_username" id="username" class="form-control" value="{{ last_username }}" placeholder="Username" required autofocus>
+        <label for="password" class="sr-only">Password</label>
+        <input type="password" name="_password" id="password" class="form-control" placeholder="Password" required>
+        <div class="checkbox">
+            <label>
+                <input type="checkbox" value="remember-me"> Remember me
+            </label>
+        </div>
+        <button class="btn btn-lg btn-primary btn-block" type="submit">Sign in</button>
+    </form>
+
+</div><!-- /.container -->
+
+<!-- ========= -->
+<!-- Libraries -->
+<!-- ========= -->
+<script src="http://hector.dev/devops-assignment/node_modules/jquery/dist/jquery.min.js" type="text/javascript"></script>
+<script src="http://hector.dev/devops-assignment/node_modules/underscore/underscore-min.js" type="text/javascript"></script>
+<script src="http://hector.dev/devops-assignment/node_modules/bootstrap/dist/js/bootstrap.js" type="text/javascript"></script>
+</body>
+</html>
+
