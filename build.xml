@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<project name="ImageStream" default="prepare_libs">
+    <!--phing -Denvironment=production-->
+    <!--phing -Denvironment=development-->
+    <property name="environment" value="development"/>
+
+    <target name="prepare_libs" description="Install vendor libraries with composer">
+        <if>
+            <equals arg1="${environment}" arg2="production"/>
+            <then>
+                <exec executable="${project.basedir}/composer.phar" passthru="true" checkreturn="true" dir="${project.basedir}">
+                    <arg value="install"/>
+                    <arg value="--no-autoloader"/>
+                    <arg value="--no-dev"/>
+                </exec>
+                <exec executable="${project.basedir}/composer.phar" passthru="true" checkreturn="true" dir="${project.basedir}">
+                    <arg value="dump-autoload" />
+                    <arg value="--optimize" />
+                    <arg value="--no-dev" />
+                </exec>
+            </then>
+            <else>
+                <exec executable="${project.basedir}/composer.phar" passthru="true" checkreturn="true" dir="${project.basedir}">
+                    <arg value="install"/>
+                    <arg value="--no-autoloader"/>
+                </exec>
+                <exec executable="${project.basedir}/composer.phar" passthru="true" checkreturn="true" dir="${project.basedir}">
+                    <arg value="dump-autoload" />
+                </exec>
+            </else>
+        </if>
+    </target>
+</project>
