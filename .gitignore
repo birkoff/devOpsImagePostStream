@@ -1,0 +1,5 @@
+phinx.yml
+vendor/*
+var/*
+
+app/config/parameters.yml
