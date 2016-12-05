@@ -7,10 +7,11 @@ namespace AppBundle\Service;
 use AppBundle\Entity\Post;
 use AppBundle\Repository\PostRepository;
 use Doctrine\Common\Persistence\ObjectRepository;
+use Symfony\Component\HttpFoundation\File\UploadedFile;
 
 class PostService
 {
-    const MAX_RESULTS = 5;
+    const MAX_RESULTS = 15;
 
     /**
      * @var PostRepository $repository
@@ -18,15 +19,28 @@ class PostService
     private $repository;
 
     /**
+     * @var ObjectStorageHelper $storageHelper
+     */
+    private $storageHelper;
+
+    /**
      * PostService constructor.
      * PostRepository
      * @param ObjectRepository $repository
+     * @internal param ObjectStorageHelper $storageHelper
      */
     public function __construct(ObjectRepository $repository)
     {
         $this->repository = $repository;
     }
 
+    /**
+     * @param ObjectStorageHelper $storageHelper
+     */
+    public function setStorageHelper(ObjectStorageHelper $storageHelper)
+    {
+        $this->storageHelper = $storageHelper;
+    }
 
     /**
      * @param int $page
@@ -36,6 +50,7 @@ class PostService
     {
         $firstResult = $this->getFistResultStarts($page);
         return $this->repository->createQueryBuilder('t')
+            ->orderBy('t.id', 'DESC')
             ->setMaxResults(self::MAX_RESULTS)
             ->setFirstResult($firstResult)
             ->getQuery()
@@ -71,6 +86,11 @@ class PostService
             ->getSingleScalarResult();
     }
 
+    public function getUploadUrl()
+    {
+        return $this->storageHelper->getUploadUrl();
+    }
+
     /**
      * @param $page
      * @return int
@@ -78,5 +98,14 @@ class PostService
     private function getFistResultStarts($page)
     {
         return ($page * self::MAX_RESULTS) - self::MAX_RESULTS;
+    }
+
+    /**
+     * @param UploadedFile $file
+     * @return string
+     */
+    public function handleUploadedFile(UploadedFile $file)
+    {
+        return $this->storageHelper->handleUpload($file);
     }
 }

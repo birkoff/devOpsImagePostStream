@@ -1,11 +1,12 @@
 <?php
 
 namespace AppBundle\Service;
-
+use Symfony\Component\HttpFoundation\File\UploadedFile;
 use Aws\Sdk;
+
 date_default_timezone_set('UTC');
 
-class AwsS3Service
+class AwsS3Service implements ObjectStorageHelper
 {
     private $s3;
 
@@ -33,5 +34,22 @@ class AwsS3Service
         $request = $this->s3->createPresignedRequest($cmd, '+5 minutes');
 
         return (string)$request->getUri();
+    }
+
+    /**
+     * @param UploadedFile $uploadedFile
+     * @return string
+     * @internal param UploadedFile $file
+     */
+    public function handleUpload(UploadedFile $uploadedFile)
+    {
+        $bucket = 'hectors-lambda-test-ppictures';
+
+        $this->s3->putObject([
+            'Bucket'     => $bucket,
+            'Key'        => 'image.png',
+            'SourceFile' => $uploadedFile
+        ]);
+        return '';
     }
 }

@@ -3,9 +3,15 @@
 namespace AppBundle\Controller;
 
 use AppBundle\Entity\Post;
+use AppBundle\Exceptions\InvalidExtensionException;
+use AppBundle\Exceptions\InvalidFileSizeException;
+use AppBundle\Service\AwsS3Service;
+use AppBundle\Service\LocalStorage;
 use AppBundle\Service\PaginationService;
 use AppBundle\Service\PostService;
 use AppBundle\Repository\PostRepository;
+use Symfony\Component\HttpFoundation\File\UploadedFile;
+use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 use Sensio\Bundle\FrameworkExtraBundle\Configuration\Route;
 use Symfony\Bundle\FrameworkBundle\Controller\Controller;
@@ -21,12 +27,13 @@ class PostController extends Controller implements TokenAuthenticatedControllerI
 {
     /**
      * @Route("/api/posts/{page}", name="post_list", requirements={"page": "\d+"})
+     * @param int $page
+     * @return \Symfony\Component\HttpFoundation\JsonResponse
      */
     public function listAction($page = 1)
     {
         /** @var PostService $postService */
         $postService = $this->get('app.post_service');
-
         $posts = $postService->findBatch($page);
 
         /** @var PaginationService $paginationService */
@@ -38,7 +45,7 @@ class PostController extends Controller implements TokenAuthenticatedControllerI
         $response = $this->json($responseArray);
 
         $response->headers->set('Content-Type', 'application/json');
-        $response->headers->set('Access-Control-Allow-Origin', 'http://hector.dev');
+        $response->headers->set('Access-Control-Allow-Origin', '*');
         return $response;
     }
 
@@ -54,13 +61,11 @@ class PostController extends Controller implements TokenAuthenticatedControllerI
 
         /** @var \AppBundle\Entity\Post $post */
         $post = $postService->find($id);
-
-        $serializer = $this->get('serializer');
-        $jsonContent = $serializer->serialize($post, 'json');
+        $jsonContent = $this->getEntityAttributtes($post);
 
         $response = new Response($jsonContent);
         $response->headers->set('Content-Type', 'application/json');
-        $response->headers->set('Access-Control-Allow-Origin', 'http://hector.dev');
+        $response->headers->set('Access-Control-Allow-Origin', '*');
         return $response;
     }
 
@@ -78,33 +83,66 @@ class PostController extends Controller implements TokenAuthenticatedControllerI
 
 
     /**
-     * @param Request $request
      * @return \Symfony\Component\HttpFoundation\JsonResponse
      * Matches /api/post/new exactly
      * @Route("/api/post/new")
      */
-    public function newAction(Request $request)
+    public function newAction()
     {
-        if($request->isMethod('GET')) {
-            $s3 = $this->get('app.aws_s3');
-            $uploadUrl = $s3->getUploadUrl();
-            return $this->json(['upload_url' => $uploadUrl]);
-        }
+        /** @var PostService $postService */
+        $postService = $this->get('app.post_service');
+        $postService->setStorageHelper(new LocalStorage());
+        $uploadUrl = $postService->getUploadUrl();
+        $response = $this->json(['uploadUrl' => $uploadUrl]);
+        $response->headers->set('Content-Type', 'application/json');
+        $response->headers->set('Access-Control-Allow-Origin', '*');
+        $response->send();
+    }
 
+    /**
+     * Matches /api/post/create exactly
+     * @Route("/api/post/create")
+     * @param Request $request
+     * @return \Symfony\Component\HttpFoundation\JsonResponse|RedirectResponse
+     */
+    public function createAction(Request $request)
+    {
         $title = $request->request->get('title');
-        $imageUrl = $request->request->get('imageUrl');
+
+        /** @var  UploadedFile $file */
+        $file = $request->files->get('upload');
+
+        /** @var PostService $postService */
+        $postService = $this->get('app.post_service');
+        $postService->setStorageHelper(new LocalStorage());
+
+        try {
+            $imageUrl = $postService->handleUploadedFile($file);
+        } catch (InvalidExtensionException $e) {
+            $response = $this->json(['error' => 'Invalid File extension ' . $e->getMessage()], 400);
+            $response->headers->set('Content-Type', 'application/json');
+            $response->headers->set('Access-Control-Allow-Origin', '*');
+            return $response;
+        } catch (InvalidFileSizeException $e) {
+            $response = $this->json(['error' => 'Invalid File Size' . $e->getMessage()], 400);
+            $response->headers->set('Content-Type', 'application/json');
+            $response->headers->set('Access-Control-Allow-Origin', '*');
+            return $response;
+        }
 
         $post = new Post();
         $post->setTitle($title)->setImageUrl($imageUrl);
 
-        /** @var PostService $postService */
-        $postService = $this->get('app.post_service');
         $postService->create($post);
 
-        $response = $this->json(['message' => 'success', 'data' => ['title' => $title, 'url' => $imageUrl]]);
-        $response->headers->set('Content-Type', 'application/json');
-        $response->headers->set('Access-Control-Allow-Origin', 'http://hector.dev');
-        return $response;
+        if($request->isXmlHttpRequest()) {
+            $response = $this->json(['message' => 'success', 'data' => ['title' => $title, 'url' => $imageUrl]]);
+            $response->headers->set('Content-Type', 'application/json');
+            $response->headers->set('Access-Control-Allow-Origin', '*');
+            return $response;
+        }
+
+        return $this->redirect($request->headers->get('referer'));
     }
 
     /**
@@ -125,7 +163,7 @@ class PostController extends Controller implements TokenAuthenticatedControllerI
     {
         $response = $this->json(['views' => '2045']);
         $response->headers->set('Content-Type', 'application/json');
-        $response->headers->set('Access-Control-Allow-Origin', 'http://hector.dev');
+        $response->headers->set('Access-Control-Allow-Origin', '*');
         return $response;
     }
 
@@ -140,7 +178,7 @@ class PostController extends Controller implements TokenAuthenticatedControllerI
         $postCount = $postService->countPosts();
         $response = $this->json(['posts' => $postCount]);
         $response->headers->set('Content-Type', 'application/json');
-        $response->headers->set('Access-Control-Allow-Origin', 'http://hector.dev');
+        $response->headers->set('Access-Control-Allow-Origin', '*');
         return $response;
     }
 
