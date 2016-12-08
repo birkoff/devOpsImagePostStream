@@ -3,3 +3,9 @@ vendor/*
 var/*
 
 app/config/parameters.yml
+
+/web/bundles/
+/app/bootstrap*
+/app/cache/*
+/app/logs/*
+

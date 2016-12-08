@@ -21,7 +21,7 @@ use Symfony\Component\Serializer\Serializer;
 use Symfony\Component\Serializer\Encoder\JsonEncoder;
 use Symfony\Component\Serializer\Normalizer\ObjectNormalizer;
 
-use \Firebase\JWT\JWT;
+//use \Firebase\JWT\JWT;
 
 class PostController extends Controller implements TokenAuthenticatedControllerInterface
 {
@@ -38,14 +38,13 @@ class PostController extends Controller implements TokenAuthenticatedControllerI
 
         /** @var PaginationService $paginationService */
         $paginationService = $this->get('app.pagination_service');
-        $paginationService->setPage($page)->setMaxResults(PostService::MAX_RESULTS)->setTotalItems($postService->countPosts());
+        $paginationService->setPage($page)->setMaxResults(PostRepository::MAX_RESULTS)->setTotalItems($postService->countPosts());
 
         $postsArray = $this->getEntityAttributtes($posts);
         $responseArray = ['posts' => $postsArray, 'pagination'=> $paginationService->getPaginationValues()];
         $response = $this->json($responseArray);
 
-        $response->headers->set('Content-Type', 'application/json');
-        $response->headers->set('Access-Control-Allow-Origin', '*');
+        $response = $this->setResponseHeaders($response);
         return $response;
     }
 
@@ -64,8 +63,7 @@ class PostController extends Controller implements TokenAuthenticatedControllerI
         $jsonContent = $this->getEntityAttributtes($post);
 
         $response = new Response($jsonContent);
-        $response->headers->set('Content-Type', 'application/json');
-        $response->headers->set('Access-Control-Allow-Origin', '*');
+        $response = $this->setResponseHeaders($response);
         return $response;
     }
 
@@ -94,8 +92,7 @@ class PostController extends Controller implements TokenAuthenticatedControllerI
         $postService->setStorageHelper(new LocalStorage());
         $uploadUrl = $postService->getUploadUrl();
         $response = $this->json(['uploadUrl' => $uploadUrl]);
-        $response->headers->set('Content-Type', 'application/json');
-        $response->headers->set('Access-Control-Allow-Origin', '*');
+        $response = $this->setResponseHeaders($response);
         $response->send();
     }
 
@@ -114,19 +111,17 @@ class PostController extends Controller implements TokenAuthenticatedControllerI
 
         /** @var PostService $postService */
         $postService = $this->get('app.post_service');
-        $postService->setStorageHelper(new LocalStorage());
+        $postService->setStorageHelper(new AwsS3Service());
 
         try {
             $imageUrl = $postService->handleUploadedFile($file);
         } catch (InvalidExtensionException $e) {
             $response = $this->json(['error' => 'Invalid File extension ' . $e->getMessage()], 400);
-            $response->headers->set('Content-Type', 'application/json');
-            $response->headers->set('Access-Control-Allow-Origin', '*');
+            $response = $this->setResponseHeaders($response);
             return $response;
         } catch (InvalidFileSizeException $e) {
             $response = $this->json(['error' => 'Invalid File Size' . $e->getMessage()], 400);
-            $response->headers->set('Content-Type', 'application/json');
-            $response->headers->set('Access-Control-Allow-Origin', '*');
+            $response = $this->setResponseHeaders($response);
             return $response;
         }
 
@@ -135,10 +130,11 @@ class PostController extends Controller implements TokenAuthenticatedControllerI
 
         $postService->create($post);
 
+        $jsonContent = $this->getEntityAttributtes($post);
+
         if($request->isXmlHttpRequest()) {
-            $response = $this->json(['message' => 'success', 'data' => ['title' => $title, 'url' => $imageUrl]]);
-            $response->headers->set('Content-Type', 'application/json');
-            $response->headers->set('Access-Control-Allow-Origin', '*');
+            $response = $this->json(['message' => 'success', 'data' => $jsonContent]);
+            $response = $this->setResponseHeaders($response);
             return $response;
         }
 
@@ -162,8 +158,7 @@ class PostController extends Controller implements TokenAuthenticatedControllerI
     public function viewsAction()
     {
         $response = $this->json(['views' => '2045']);
-        $response->headers->set('Content-Type', 'application/json');
-        $response->headers->set('Access-Control-Allow-Origin', '*');
+        $response = $this->setResponseHeaders($response);
         return $response;
     }
 
@@ -177,8 +172,7 @@ class PostController extends Controller implements TokenAuthenticatedControllerI
         $postService = $this->get('app.post_service');
         $postCount = $postService->countPosts();
         $response = $this->json(['posts' => $postCount]);
-        $response->headers->set('Content-Type', 'application/json');
-        $response->headers->set('Access-Control-Allow-Origin', '*');
+        $response = $this->setResponseHeaders($response);
         return $response;
     }
 
@@ -191,5 +185,15 @@ class PostController extends Controller implements TokenAuthenticatedControllerI
         $serializer = $this->get('serializer');
         $jsonContent = $serializer->serialize($posts, 'json');
         return json_decode($jsonContent, true);
+    }
+
+    /**
+     * @param $response
+     */
+    private function setResponseHeaders($response)
+    {
+        $response->headers->set('Content-Type', 'application/json');
+        $response->headers->set('Access-Control-Allow-Origin', '*');
+        return $response;
     }
 }

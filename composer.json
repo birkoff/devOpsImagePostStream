@@ -31,7 +31,8 @@
         "sensio/generator-bundle": "^3.0",
         "incenteev/composer-parameter-handler": "^2.0",
         "aws/aws-sdk-php": "^3.19",
-        "symfony/class-loader": "^3.1"
+        "symfony/class-loader": "^3.1",
+        "ramsey/uuid": "^3.5"
     },
     "require-dev": {
         "phing/phing": "^2.15",

@@ -8,11 +8,11 @@ use AppBundle\Entity\Post;
 use AppBundle\Repository\PostRepository;
 use Doctrine\Common\Persistence\ObjectRepository;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
+use AppBundle\Exceptions\InvalidExtensionException;
+use AppBundle\Exceptions\InvalidFileSizeException;
 
 class PostService
 {
-    const MAX_RESULTS = 15;
-
     /**
      * @var PostRepository $repository
      */
@@ -49,12 +49,7 @@ class PostService
     public function findBatch($page = 1)
     {
         $firstResult = $this->getFistResultStarts($page);
-        return $this->repository->createQueryBuilder('t')
-            ->orderBy('t.id', 'DESC')
-            ->setMaxResults(self::MAX_RESULTS)
-            ->setFirstResult($firstResult)
-            ->getQuery()
-            ->getArrayResult();
+        return $this->repository->findBatch($firstResult);
     }
 
     /**
@@ -80,10 +75,7 @@ class PostService
      */
     public function countPosts()
     {
-        return $this->repository->createQueryBuilder('t')
-            ->select('COUNT(t.id)')
-            ->getQuery()
-            ->getSingleScalarResult();
+        return $this->repository->countAllPosts();
     }
 
     public function getUploadUrl()
@@ -97,15 +89,25 @@ class PostService
      */
     private function getFistResultStarts($page)
     {
-        return ($page * self::MAX_RESULTS) - self::MAX_RESULTS;
+        return ($page * PostRepository::MAX_RESULTS) - PostRepository::MAX_RESULTS;
     }
 
     /**
      * @param UploadedFile $file
      * @return string
+     * @throws InvalidExtensionException
+     * @throws InvalidFileSizeException
      */
     public function handleUploadedFile(UploadedFile $file)
     {
+        if(!in_array($file->getMimeType(), ['image/jpeg', 'image/gif', 'image/png'])) {
+            throw new InvalidExtensionException($file->getMimeType());
+        }
+
+        if($file->getSize() > 20000000) {
+            throw new InvalidFileSizeException($file->getSize());
+        }
+
         return $this->storageHelper->handleUpload($file);
     }
 }

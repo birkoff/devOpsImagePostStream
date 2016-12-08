@@ -37,19 +37,30 @@ class AwsS3Service implements ObjectStorageHelper
     }
 
     /**
-     * @param UploadedFile $uploadedFile
+     * @param UploadedFile $file
      * @return string
-     * @internal param UploadedFile $file
      */
-    public function handleUpload(UploadedFile $uploadedFile)
+    public function handleUpload(UploadedFile $file)
     {
+        $filename = uniqid() . "." . $file->getClientOriginalExtension();
+        $path = "images/";
+        $file->move($path, $filename);
+
+        $sourceFile = $path . $filename;
         $bucket = 'hectors-lambda-test-ppictures';
 
         $this->s3->putObject([
             'Bucket'     => $bucket,
-            'Key'        => 'image.png',
-            'SourceFile' => $uploadedFile
+            'Key'        => $filename,
+            'SourceFile' => $sourceFile
         ]);
-        return '';
+
+        $dstBucket = $bucket . "-thumbnails";
+        $dstKey    = "thumbnail-" . $filename;
+
+        $url = $this->s3->getObjectUrl($dstBucket, $dstKey);
+
+        unlink($sourceFile);
+        return $url;
     }
 }

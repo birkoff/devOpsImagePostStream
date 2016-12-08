@@ -2,7 +2,9 @@
 
 namespace AppBundle\Entity;
 
+use DateTime;
 use Doctrine\ORM\Mapping as ORM;
+use Ramsey\Uuid\Uuid;
 
 /**
  * Post
@@ -13,11 +15,10 @@ use Doctrine\ORM\Mapping as ORM;
 class Post
 {
     /**
-     * @var int
+     * @var string
      *
-     * @ORM\Column(name="id", type="integer")
+     * @ORM\Column(name="id", type="string", length=255, unique=true)
      * @ORM\Id
-     * @ORM\GeneratedValue(strategy="AUTO")
      */
     private $id;
 
@@ -35,6 +36,21 @@ class Post
      */
     private $imageUrl;
 
+    /**
+     * @var string
+     *
+     * @ORM\Column(name="created", type="datetime")
+     */
+    private $created;
+
+    /**
+     * Post constructor.
+     */
+    public function __construct()
+    {
+        $this->id = Uuid::uuid4();
+        $this->created = new DateTime();
+    }
 
     /**
      * Get id
@@ -92,6 +108,14 @@ class Post
     public function getImageUrl()
     {
         return $this->imageUrl;
+    }
+
+    /**
+     * @return mixed
+     */
+    public function getCreated()
+    {
+        return $this->created;
     }
 }
 
