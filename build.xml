@@ -9,24 +9,31 @@
         <if>
             <equals arg1="${environment}" arg2="production"/>
             <then>
-                <exec executable="${project.basedir}/composer.phar" passthru="true" checkreturn="true" dir="${project.basedir}">
+                <exec executable="/usr/bin/composer" passthru="true" checkreturn="true" dir="${project.basedir}">
                     <arg value="install"/>
-                    <arg value="--no-autoloader"/>
                     <arg value="--no-dev"/>
-                </exec>
-                <exec executable="${project.basedir}/composer.phar" passthru="true" checkreturn="true" dir="${project.basedir}">
-                    <arg value="dump-autoload" />
-                    <arg value="--optimize" />
-                    <arg value="--no-dev" />
                 </exec>
             </then>
             <else>
-                <exec executable="${project.basedir}/composer.phar" passthru="true" checkreturn="true" dir="${project.basedir}">
+                <exec executable="/usr/bin/composer" passthru="true" checkreturn="true" dir="${project.basedir}">
                     <arg value="install"/>
-                    <arg value="--no-autoloader"/>
                 </exec>
-                <exec executable="${project.basedir}/composer.phar" passthru="true" checkreturn="true" dir="${project.basedir}">
-                    <arg value="dump-autoload" />
+            </else>
+        </if>
+    </target>
+    <target name="migrate_db" description="Migrate Database">
+        <if>
+            <equals arg1="${environment}" arg2="production"/>
+            <then>
+                <exec executable="${project.basedir}/vendor/bin/phinx" passthru="true" checkreturn="true" dir="${project.basedir}">
+                    <arg value="migrate"/>
+                    <arg value="-e"/>
+                    <arg value="production"/>
+                </exec>
+            </then>
+            <else>
+                <exec executable="${project.basedir}/vendor/bin/phinx" passthru="true" checkreturn="true" dir="${project.basedir}">
+                    <arg value="migrate"/>
                 </exec>
             </else>
         </if>

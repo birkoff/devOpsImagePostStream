@@ -32,12 +32,11 @@
         "incenteev/composer-parameter-handler": "^2.0",
         "aws/aws-sdk-php": "^3.19",
         "symfony/class-loader": "^3.1",
-        "ramsey/uuid": "^3.5"
+        "ramsey/uuid": "^3.5",
+        "robmorgan/phinx": "^0.6.5"
     },
     "require-dev": {
-        "phing/phing": "^2.15",
-        "fzaninotto/faker": "^1.6",
-        "robmorgan/phinx": "^0.6.5"
+        "fzaninotto/faker": "^1.6"
     },
     "scripts": {
         "symfony-scripts": [
