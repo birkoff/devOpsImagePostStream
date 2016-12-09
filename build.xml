@@ -9,13 +9,13 @@
         <if>
             <equals arg1="${environment}" arg2="production"/>
             <then>
-                <exec executable="/usr/bin/composer" passthru="true" checkreturn="true" dir="${project.basedir}">
+                <exec executable="${project.basedir}/composer.phar" passthru="true" checkreturn="true" dir="${project.basedir}">
                     <arg value="install"/>
                     <arg value="--no-dev"/>
                 </exec>
             </then>
             <else>
-                <exec executable="/usr/bin/composer" passthru="true" checkreturn="true" dir="${project.basedir}">
+                <exec executable="${project.basedir}/composer.phar" passthru="true" checkreturn="true" dir="${project.basedir}">
                     <arg value="install"/>
                 </exec>
             </else>
