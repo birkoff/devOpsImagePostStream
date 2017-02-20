@@ -3,10 +3,11 @@
 
 namespace AppBundle\Service;
 
-
+use Doctrine\ORM\Tools\Pagination\Paginator;
 use AppBundle\Entity\Post;
 use AppBundle\Repository\PostRepository;
 use Doctrine\Common\Persistence\ObjectRepository;
+use Symfony\Component\HttpFoundation\File\File;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
 use AppBundle\Exceptions\InvalidExtensionException;
 use AppBundle\Exceptions\InvalidFileSizeException;
@@ -21,35 +22,41 @@ class PostService
     /**
      * @var ObjectStorageHelper $storageHelper
      */
-    private $storageHelper;
+    private $localStorageService;
+
+    private $cloudStorageService;
+
+    /**
+     * @var EventService $event
+     */
+    private $event;
 
     /**
      * PostService constructor.
      * PostRepository
      * @param ObjectRepository $repository
+     * @param EventInterface|EventService $eventService
+     * @param StorageInterface $localStorageService
+     * @param StorageInterface $cloudStorageService
      * @internal param ObjectStorageHelper $storageHelper
      */
-    public function __construct(ObjectRepository $repository)
+    public function __construct(ObjectRepository $repository, EventInterface $eventService, StorageInterface $localStorageService, StorageInterface $cloudStorageService)
     {
         $this->repository = $repository;
-    }
-
-    /**
-     * @param ObjectStorageHelper $storageHelper
-     */
-    public function setStorageHelper(ObjectStorageHelper $storageHelper)
-    {
-        $this->storageHelper = $storageHelper;
+        $this->eventService = $eventService;
+        $this->localStorageService = $localStorageService;
+        $this->cloudStorageService = $cloudStorageService;
     }
 
     /**
      * @param int $page
-     * @return array
+     * @return Paginator
      */
     public function findBatch($page = 1)
     {
         $firstResult = $this->getFistResultStarts($page);
-        return $this->repository->findBatch($firstResult);
+        $query = $this->repository->findBatch($firstResult);
+        return new Paginator($query);
     }
 
     /**
@@ -62,12 +69,24 @@ class PostService
     }
 
     /**
-     * @param Post $post
+     * @param $title
+     * @param $file
      * @return mixed
+     * @internal param $imageUrl
+     * @internal param $attributes
+     * @internal param Post $post
      */
-    public function create(Post $post)
+    public function create($title, $file)
     {
-        return $this->repository->create($post);
+        $imageUrl = $this->handleUploadedFile($file);
+
+        $post = new Post();
+        $post->setTitle($title);
+        $post->setImageUrl($imageUrl);
+
+        $this->repository->create($post);
+
+        $this->eventService->sendMessage('new_post');
     }
 
     /**
@@ -76,11 +95,6 @@ class PostService
     public function countPosts()
     {
         return $this->repository->countAllPosts();
-    }
-
-    public function getUploadUrl()
-    {
-        return $this->storageHelper->getUploadUrl();
     }
 
     /**
@@ -100,14 +114,18 @@ class PostService
      */
     public function handleUploadedFile(UploadedFile $file)
     {
-        if(!in_array($file->getMimeType(), ['image/jpeg', 'image/gif', 'image/png'])) {
+        if(!in_array($file->getMimeType(), ['image/jpeg', 'image/png'])) {
             throw new InvalidExtensionException($file->getMimeType());
         }
 
-        if($file->getSize() > 20000000) {
+        if($file->getSize() > 2000000) { // MB
             throw new InvalidFileSizeException($file->getSize());
         }
 
-        return $this->storageHelper->handleUpload($file);
+        $filename = uniqid() . "." . $file->getClientOriginalExtension();
+        $localFile = $this->localStorageService->save($file, $filename);
+//        $localFile = new File($localFile);
+        $fileUrl = $this->cloudStorageService->save($localFile, $filename);
+        return $fileUrl;
     }
 }

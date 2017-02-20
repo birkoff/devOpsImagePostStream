@@ -17,7 +17,7 @@ class ExceptionListener
         // You get the exception object from the received event
         $exception = $event->getException();
         $message = sprintf(
-            'My Error says: %s with code: %s',
+            'ImageStream Exception: %s with code: %s',
             $exception->getMessage(),
             $exception->getCode()
         );

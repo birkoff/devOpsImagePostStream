@@ -10,11 +10,36 @@ services:
         tags:
             - { name: kernel.event_listener, event: kernel.exception }
 
-    app.aws_s3:
-        class: AppBundle\Service\AwsS3Service
+    app.aws_s3_wrapper:
+        class: AppBundle\Wrapper\Aws\S3Wrapper
+        arguments: ["%aws_s3_bucket_upload%"]
 
-    app.aws_s3:
-        class: AppBundle\Service\AwsElasticCacheService
+    app.aws_sns_wrapper:
+        class: AppBundle\Wrapper\Aws\SnsWrapper
+        arguments: ["%aws_sns_arn%"]
+
+    app.aws_sqs_wrapper:
+        class: AppBundle\Wrapper\Aws\SqsWrapper
+        arguments: ["%aws_sqs_queue%"]
+
+    app.local_storage_wrapper:
+        class: AppBundle\Wrapper\LocalStorageWrapper
+
+    app.event_service:
+        class: AppBundle\Service\EventService
+        arguments: ["@app.aws_sqs_wrapper"]
+
+    app.notification_service:
+        class: AppBundle\Service\NotificationService
+        arguments: ["@app.aws_sns_wrapper"]
+
+    app.cloud_storage_service:
+        class: AppBundle\Service\StorageService
+        arguments: ["@app.aws_s3_wrapper"]
+
+    app.local_storage_service:
+        class: AppBundle\Service\StorageService
+        arguments: ["@app.local_storage_wrapper"]
 
     app.tokens.action_listener:
         class: AppBundle\EventListener\TokenListener
@@ -31,7 +56,7 @@ services:
 
     app.post_service:
         class: AppBundle\Service\PostService
-        arguments: ["@app.post_repository"]
+        arguments: ["@app.post_repository", "@app.event_service", "@app.local_storage_service", "@app.cloud_storage_service"]
 
     app.user_repository:
             class: Doctrine\ORM\EntityRepository

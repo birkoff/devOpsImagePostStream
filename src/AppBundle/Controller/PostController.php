@@ -2,12 +2,8 @@
 
 namespace AppBundle\Controller;
 
-use AppBundle\Entity\Post;
 use AppBundle\Exceptions\InvalidExtensionException;
 use AppBundle\Exceptions\InvalidFileSizeException;
-use AppBundle\Service\AwsS3Service;
-use AppBundle\Service\LocalStorage;
-use AppBundle\Service\PaginationService;
 use AppBundle\Service\PostService;
 use AppBundle\Repository\PostRepository;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
@@ -21,7 +17,7 @@ use Symfony\Component\Serializer\Serializer;
 use Symfony\Component\Serializer\Encoder\JsonEncoder;
 use Symfony\Component\Serializer\Normalizer\ObjectNormalizer;
 
-//use \Firebase\JWT\JWT;
+// docker run --name mysql-server -e MYSQL_ROOT_PASSWORD=root -d mysql/mysql-server
 
 class PostController extends Controller implements TokenAuthenticatedControllerInterface
 {
@@ -38,9 +34,11 @@ class PostController extends Controller implements TokenAuthenticatedControllerI
 
         /** @var PaginationService $paginationService */
         $paginationService = $this->get('app.pagination_service');
-        $paginationService->setPage($page)->setMaxResults(PostRepository::MAX_RESULTS)->setTotalItems($postService->countPosts());
+        $paginationService->setPage($page)
+            ->setMaxResults(PostRepository::MAX_RESULTS)
+            ->setTotalItems($postService->countPosts());
 
-        $postsArray = $this->getEntityAttributtes($posts);
+        $postsArray = $this->getEntityAttributes($posts);
         $responseArray = ['posts' => $postsArray, 'pagination'=> $paginationService->getPaginationValues()];
         $response = $this->json($responseArray);
 
@@ -60,40 +58,11 @@ class PostController extends Controller implements TokenAuthenticatedControllerI
 
         /** @var \AppBundle\Entity\Post $post */
         $post = $postService->find($id);
-        $jsonContent = $this->getEntityAttributtes($post);
+        $jsonContent = $this->getEntityAttributes($post);
 
         $response = new Response($jsonContent);
         $response = $this->setResponseHeaders($response);
         return $response;
-    }
-
-    /**
-     * Matches /api/posts/stats exactly
-     * @Route("/apiposts/stats")
-     */
-    public function statsAction()
-    {
-        $number = mt_rand(0, 100);
-        return new Response(
-            '<html><body>Lucky number: '.$number.'</body></html>'
-        );
-    }
-
-
-    /**
-     * @return \Symfony\Component\HttpFoundation\JsonResponse
-     * Matches /api/post/new exactly
-     * @Route("/api/post/new")
-     */
-    public function newAction()
-    {
-        /** @var PostService $postService */
-        $postService = $this->get('app.post_service');
-        $postService->setStorageHelper(new LocalStorage());
-        $uploadUrl = $postService->getUploadUrl();
-        $response = $this->json(['uploadUrl' => $uploadUrl]);
-        $response = $this->setResponseHeaders($response);
-        $response->send();
     }
 
     /**
@@ -111,10 +80,9 @@ class PostController extends Controller implements TokenAuthenticatedControllerI
 
         /** @var PostService $postService */
         $postService = $this->get('app.post_service');
-        $postService->setStorageHelper(new AwsS3Service());
 
         try {
-            $imageUrl = $postService->handleUploadedFile($file);
+            $postService->create($title, $file);
         } catch (InvalidExtensionException $e) {
             $response = $this->json(['error' => 'Invalid File extension ' . $e->getMessage()], 400);
             $response = $this->setResponseHeaders($response);
@@ -125,30 +93,10 @@ class PostController extends Controller implements TokenAuthenticatedControllerI
             return $response;
         }
 
-        $post = new Post();
-        $post->setTitle($title)->setImageUrl($imageUrl);
-
-        $postService->create($post);
-
-        $jsonContent = $this->getEntityAttributtes($post);
-
-        if($request->isXmlHttpRequest()) {
-            $response = $this->json(['message' => 'success', 'data' => $jsonContent]);
-            $response = $this->setResponseHeaders($response);
-            return $response;
-        }
-
-        return $this->redirect($request->headers->get('referer'));
-    }
-
-    /**
-     * Matches /api/posts/export exactly
-     * @Route("/api/posts/export")
-     */
-    public function exportAction()
-    {
-        return $this->json(['status' => 'in_process']);
-
+        $jsonContent = $this->getEntityAttributes([]);
+        $response = $this->json(['message' => 'success', 'data' => $jsonContent]);
+        $response = $this->setResponseHeaders($response);
+        return $response;
     }
 
     /**
@@ -180,7 +128,7 @@ class PostController extends Controller implements TokenAuthenticatedControllerI
      * @param $posts
      * @return array
      */
-    private function getEntityAttributtes($posts)
+    private function getEntityAttributes($posts)
     {
         $serializer = $this->get('serializer');
         $jsonContent = $serializer->serialize($posts, 'json');

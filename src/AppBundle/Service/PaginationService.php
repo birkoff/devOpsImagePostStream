@@ -9,6 +9,12 @@ class PaginationService
     private $page;
     private $maxResults;
     private $totalItems;
+    private $path;
+
+    public function __construct($path = '')
+    {
+        $this->path = $path;
+    }
 
     public function setPage($page)
     {
@@ -30,7 +36,11 @@ class PaginationService
 
     public function getPaginationValues()
     {
-        return ['current' => $this->page, 'next' => $this->getNextPage(), 'prev' => $this->getPrevPage(), 'total' => $this->getLastPage()];
+        return [
+            'current' => $this->page,
+            'next' => $this->getNextPage(),
+            'prev' => $this->getPrevPage(),
+            'total' => $this->getLastPage()];
     }
 
     public function getLastPage()
@@ -40,11 +50,11 @@ class PaginationService
 
     public function getNextPage()
     {
-        return ($this->page + 1) <= $this->getLastPage() ?  $this->page + 1 : 0;
+        return ($this->page + 1) <= $this->getLastPage() ?  $this->path . ($this->page + 1) : 0;
     }
 
     public function getPrevPage()
     {
-        return ($this->page - 1) <= 0 ? 0 : $this->page - 1;
+        return ($this->page - 1) <= 0 ? 0 : $this->path . ($this->page - 1);
     }
 }

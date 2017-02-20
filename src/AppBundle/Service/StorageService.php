@@ -8,5 +8,5 @@ use Symfony\Component\HttpFoundation\File\UploadedFile;
 
 interface ObjectStorageHelper
 {
-    public function handleUpload(UploadedFile $uploadedFile);
+    public function upload(UploadedFile $uploadedFile, $fileName);
 }
